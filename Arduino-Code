@@ -1,0 +1,143 @@
+#include "Arduino.h"
+#include "uRTCLib.h"
+using namespace std;
+// uRTCLib rtc;
+uRTCLib rtc(0x68);
+
+char daysOfTheWeek[7][12] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
+
+int buzzerPin = 2;
+int buttonPin = 7;
+
+unsigned long tick;
+int freeze1;
+//int freeze5;
+
+int m1 = 16, m2 = 24, m3 = 28, m4 = 30, m5 = 31, m6 = 15, m7 = 7, m8 = 3, m9 = 1, m0 = 0;
+
+int click = 0;
+bool end;
+
+unsigned long lastMillis = 0;
+//interval = 5;
+
+bool timerStatus;
+int timer;
+int PI_timer;
+
+bool beep;
+
+unsigned long on;
+unsigned long off;
+
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(buzzerPin, OUTPUT);
+  pinMode(buttonPin, INPUT_PULLUP);
+
+  URTCLIB_WIRE.begin();
+
+  // Comment out below line once you set the date & time.
+  // Following line sets the RTC with an explicit date & time
+  // for example to set April 14 2025 at 12:56 you would call:
+  
+  rtc.set(50, 45, 20, 7, 27, 9, 25);
+  
+  // rtc.set(second, minute, hour, dayOfWeek, dayOfMonth, month, year)
+  // set day of week (1=Sunday, 7=Saturday)
+}
+
+void loop() {
+  rtc.refresh();
+
+  unsigned long currentMillis = millis();
+  if (click != 0 && ((currentMillis - lastMillis) > 5000)) {
+    String binNum;
+    for (int i = 0; i < click; i++) {
+      binNum = binNum + "1";
+    }
+
+
+    while (binNum.length() < 5) {binNum = binNum + "0";}
+    Serial.println(binNum);
+    delay(200);
+
+    for (int i = 0; i < binNum.length(); i++) {
+      if (binNum.charAt(i) == '1') {
+      digitalWrite(buzzerPin, HIGH); delay(800); digitalWrite(buzzerPin, LOW); delay(150);
+      }
+      if (binNum.charAt(i) == '0') {
+      digitalWrite(buzzerPin, HIGH); delay(300); digitalWrite(buzzerPin, LOW); delay(150);
+      } 
+    }
+    timer = click;
+    PI_timer = click;
+    click = 0;
+    timerStatus = 1;
+  }
+
+  if(freeze1 == 100000000000){  // you can put stuff here that is delayed by first timer
+    freeze1 = 1;
+    Serial.print("Current Date & Time: ");
+    Serial.print(rtc.year());
+    Serial.print('/');
+    Serial.print(rtc.month());
+    Serial.print('/');
+    Serial.print(rtc.day());
+
+    Serial.print(" (");
+    Serial.print(daysOfTheWeek[rtc.dayOfWeek() - 1]);
+    Serial.print(") ");
+
+    Serial.print(rtc.hour());
+    Serial.print(':');
+    Serial.print(rtc.minute());
+    Serial.print(':');
+    Serial.println(rtc.second());
+  }
+
+  int buttonState = digitalRead(buttonPin);  
+  if (buttonState == LOW) {
+    digitalWrite(buzzerPin, HIGH);
+    click = click + 1;
+    Serial.println(click);
+    lastMillis = millis();
+    timerStatus = 0;
+    delay(900);
+    digitalWrite(buzzerPin, LOW);
+  }
+
+
+// Start a beep only when the timer expires, timer logic is enabled, and we’re not already beeping
+if (timer == 0 && timerStatus && !beep) {
+  if (PI_timer <= 0) {
+    // nothing to schedule; disable to avoid retrigger storm
+    timerStatus = 0;
+  } else {
+    timer = PI_timer;                
+    digitalWrite(buzzerPin, HIGH);   
+    beep = true;
+    on = millis();                   
+  }
+}
+
+// While beeping, shut off after 1s
+if (beep) {
+  if (millis() - on > 1300) {     // elapsed-time pattern
+    digitalWrite(buzzerPin, LOW);
+    beep = false;
+  }
+}
+
+
+  if(millis()-tick>1000){
+    tick=millis();
+    // this section happens every second without interupting code
+  if(freeze1>0){freeze1--;}
+  //if(freeze5>0){freeze5--;}
+  //if(freeze5 == 0) {freeze5 = 5;}
+  if (timerStatus == 1) {if(timer>0){timer--;}
+  }}
+
+}
